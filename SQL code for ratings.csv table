@@ -1,0 +1,20 @@
+-- Table: public.ratings
+
+-- DROP TABLE IF EXISTS public.ratings;
+
+CREATE TABLE IF NOT EXISTS public.ratings
+(
+    "Watcher" character varying COLLATE pg_catalog."default" NOT NULL,
+    "The Boy and The Heron" numeric,
+    "Saltburn" numeric,
+    "Im Thinking of Ending Things" numeric,
+    "The Proposal" numeric,
+    "Maestro" numeric,
+    "Barbie" numeric,
+    CONSTRAINT pk_watcher_name PRIMARY KEY ("Watcher")
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.ratings
+    OWNER to postgres;
