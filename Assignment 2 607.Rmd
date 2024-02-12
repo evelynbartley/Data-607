@@ -1,0 +1,20 @@
+---
+title: "Assignment 2 SQL and R"
+author: "Evelyn Bartley"
+date: "2024-02-04"
+output: html_document
+---
+
+## Overview:
+In this assignment I created a table from my own data collection of ratings of popular movies from five people I know, including myself. I chose to ask myself, Molly, Zoe, Alana, and Pam to rate "The Boy and the Heron", "Saltburn", "I'm Thinking of Ending Things", "The Proposal", "Maestro", and "Barbie" on a scale from 1-5. 
+
+I created the table of my data with pgAdmin 4. The reproducible SQL code for this table is linked in GitHub in the Data 607 repository. I exported the table I created as a .csv file and saved it onto my computer as "ratings.csv". Then I imported this file into the R environment and read it with the "read.csv()" command.
+
+```{r}
+myTable <- read.csv("~/Documents/Data 607/Ratings.csv")
+View(myTable)
+```
+
+
+## Conclusions:
+In this assignment, I learned how to create a table using pgAdmin with data I had collected that consisted of ratings of six recent popular movies from five participants. I then exported this table to R by saving it on my computer as a .csv file and reading the .csv file in R.
