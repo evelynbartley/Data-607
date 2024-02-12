@@ -1,0 +1,111 @@
+---
+title: "Assignment 3 - 607"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r}
+library(knitr)
+library(stringr)
+library(readr)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+This is the Week 3 assignment for Data 607 - Data Acquisition and Management.
+
+## 1.
+Using the 173 majors listed in fivethirtyeight.com’s College Majors dataset [https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/], provide code that identifies the majors that contain either "DATA" or "STATISTICS".
+
+```{r}
+# Import the dataset
+majors <- read.csv("https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv", header = TRUE, sep = ",")
+```
+
+I create a subset of the list of the majors from the column "Major".
+```{r}
+majors_col <- c(majors$Major)
+```
+
+This code creates the variable "data" that returns the values in the majors subset that have the word "DATA" in them and the variable "statistics" that returns the values in the majors subset that have the word "STATISTICS" in them. It then creates and returns a string of the majors that have the words "DATA" or "STATISTICS" in them.
+```{r}
+data <- str_subset(majors_col, pattern = "DATA")
+statistics <- str_subset(majors_col, pattern = "STATISTICS")
+data_stats_majors <- c(data, statistics)
+data_stats_majors
+```
+
+## 2. Write code that transforms the data below:
+[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+[13] "olive"        "salal berry"
+## Into a format like this:
+c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
+
+I got help on this problem from Zig Dukuray.
+
+This code stores the data as a string.
+```{r}
+input <- '[1] "bell pepper"  "bilberry"     "blackberry"   "blood orange"
+[5] "blueberry"    "cantaloupe"   "chili pepper" "cloudberry"  
+[9] "elderberry"   "lime"         "lychee"       "mulberry"    
+[13] "olive"        "salal berry"'
+input
+```
+
+This code takes the string and extracts each element in the input that matches the regex and creates an atomic vector out of the list of elements so we can continue to use stringr commands.
+```{r}
+input2 <- str_extract_all(input, "\"([a-z]+.[a-z]+)\"")
+input2
+
+input3 <- unlist(input2)
+input3
+```
+
+Remove each backslash.
+```{r}
+input4 <- str_replace_all(input3, "\"", "")
+input4
+```
+
+This code concatenates our list of vectors
+```{r}
+input5 <- paste0('c("' ,input4, '")', collapse = ',')
+input6 <- paste0(c(input4))
+input5
+input6
+```
+I know that I did not reach the desired format. I'm not sure how to use the paste0() function with c() to "concatenate" the whole list and not each element in the list.
+
+## 3. Describe, in words, what these expressions will match:
+* (.)\1\1 
+This will match any character that is followed by that same character twice after that, AKA one character that repeats three times in a row.
+
+* "(.)(.)\\2\\1" 
+This will match any pair of characters that is followed by that same pair of characters but in reverse order, AKA a pair of characters that is repeated once but in reverse.
+
+* (..)\1 
+This will match any two characters that is followed by those same two characters in that same order.
+
+* "(.).\\1.\\1" 
+This will match any character followed by any character, followed by the first character, followed by any character, followed by the first character.
+
+* "(.)(.)(.).*\\3\\2\\1" 
+This will match three characters that is followed by no character or any number of characters of any type, followed by the first three characters in reverse.
+
+
+## 4. Construct regular expressions to match words that:
+Start and end with the same character.
+"^(.).*\\1$"
+
+Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.)
+"(..)\\1.*"
+
+Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+"([a-z]).*\\1.*\\1"
+
+
