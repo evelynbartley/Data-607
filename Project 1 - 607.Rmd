@@ -1,0 +1,197 @@
+---
+title: "Project 1 - 607"
+author: "Evelyn Bartley, AJ Strauman-Scott, James Naval"
+date: "2024-02-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readr)
+library(dplyr)
+library(stringr)
+```
+
+## Overview: Project 1 Data 607
+In this project, we take a text file
+
+```{r}
+chess <- read_delim("https://raw.githubusercontent.com/evelynbartley/Data-607/main/Chess%20File", delim = "|", col_names = c("state", "name", "number", "pointTotal", "prerating", "avgOpp"), skip = 4, show_col_types = FALSE)
+```
+```{r}
+# Convert the file to a data frame
+chess <- data.frame(chess)
+```
+
+```{r}
+# Remove the NA rows
+chess <- subset(chess, chess$state != chess$state[3])
+```
+
+
+
+Here we use an iteration to create a data frame from the odd rows and a separate data frame for the even rows, and then horizontally merge those two data frames to create a data frame with 22 variables and 64 observations.
+```{r}
+name_rows <- data.frame()
+state_rows <- data.frame()
+# Use recursion to create two data frames
+for (i in 1:nrow(chess)) {
+  this_row <- chess[i,]
+  if (i %% 2 == 1) {
+    name_rows <- rbind(name_rows, this_row)
+  } 
+  else {
+    state_rows <- rbind(state_rows, this_row)
+  }
+}
+#Combine the two data frames
+chess1 = data.frame(name_rows, state_rows, check.names=T)
+```
+
+Delete the columns with "NA" and other irrelevant columns.
+```{r}
+chess2 <- select(chess1, -c("X11","X11.1", "number.1", "pointTotal.1", "prerating.1", "avgOpp.1", "X7.1", "X8.1", "X9.1", "X10.1"))
+```
+
+Rename the columns.
+```{r}
+chess3 <- 
+rename(chess2,
+    "PlayerID" = "state",
+    "PlayerName" = "name",
+    "TotalPoints" = "number",
+    "Round1" = "pointTotal",
+    "Round2" = "prerating",
+    "Round3" = "avgOpp",
+    "Round4" = "X7",
+    "Round5" = "X8",
+    "Round6" = "X9",
+    "Round7" = "X10",
+    "State" = "state.1",
+    "Prerating" = "name.1"
+)
+```
+
+
+
+Let's make a separate column to isolate the prerating for each player:
+```{r}
+chess4 <- separate_wider_delim(chess3, cols = "Prerating", delim = ":", names = "NewCol", too_many = "debug")
+chess4
+chess5 <- separate_wider_delim(chess4, cols = "Prerating_remainder", delim = "->", names = "NewCol2", too_many = "debug")
+```
+
+
+Here we get rid of the irrelevant columns.  
+```{r}
+chess6 <- select(chess5, -c("NewCol", "Prerating","Prerating_ok", "Prerating_pieces", "Prerating_remainder", "Prerating_remainder_ok", "Prerating_remainder_pieces", "Prerating_remainder_remainder"))
+```
+
+We rename the column that contains the preratings.
+```{r}
+chess7 <- rename(chess6,
+                 "PlayerPreRating" = "NewCol2")
+```
+
+We get rid of all the ":"'s that precede our preratings. And expand the players preratings that end with a "P" and a number. 
+```{r}
+chess7$PlayerPreRating <- gsub(":","",as.character(chess7$PlayerPreRating))
+
+chess8 <- separate_wider_delim(chess7, cols = "PlayerPreRating", delim = "P", names = "PreRating", too_many = "debug")
+```
+Clean it up.
+```{r}
+chessF <- select(chess8, -c("PlayerPreRating", "PlayerPreRating_ok", "PlayerPreRating_pieces", "PlayerPreRating_remainder"))
+```
+
+
+Here we isolate the player ID's for each round by removing the letter that represents the result of the round.
+```{r}
+chessF$Round1 <- gsub('[A-Z]', "", chessF$Round1)
+chessF$Round2 <- gsub('[A-Z]', "", chessF$Round2)
+chessF$Round3 <- gsub('[A-Z]', "", chessF$Round3)
+chessF$Round4 <- gsub('[A-Z]', "", chessF$Round4)
+chessF$Round5 <- gsub('[A-Z]', "", chessF$Round5)
+chessF$Round6 <- gsub('[A-Z]', "", chessF$Round6)
+chessF$Round7 <- gsub('[A-Z]', "", chessF$Round7)
+```
+
+Now we want to replace each player id that shows in each round by the corresponding player id's prerating.
+
+I want to change every row with numbers to a numeric vector.
+```{r}
+chessF$PlayerID = as.numeric(sub("[A-Z]", "", chessF$PlayerID))
+chessF$Round1 = as.numeric(sub("[A-Z]", "", chessF$Round1))
+chessF$Round2 = as.numeric(sub("[A-Z]", "", chessF$Round2))
+chessF$Round3 = as.numeric(sub("[A-Z]", "", chessF$Round3))
+chessF$Round4 = as.numeric(sub("[A-Z]", "", chessF$Round4))
+chessF$Round5 = as.numeric(sub("[A-Z]", "", chessF$Round5))
+chessF$Round6 = as.numeric(sub("[A-Z]", "", chessF$Round6))
+chessF$Round7 = as.numeric(sub("[A-Z]", "", chessF$Round7))
+chessF$PreRating = as.numeric(sub("[A-Z]", "", chessF$PreRating))
+```
+
+
+This for loop replaces the opponent's ID with their prerating in Round 1.
+```{r}
+for (i in chessF$Round1)
+  {
+  chessF$Round1[i] <- chessF$PreRating[chessF$Round1[i]]
+}
+for (i in chessF$Round2)
+  {
+  chessF$Round2[i] <- chessF$PreRating[chessF$Round2[i]]
+}
+for (i in chessF$Round3)
+  {
+  chessF$Round3[i] <- chessF$PreRating[chessF$Round3[i]]
+}
+for (i in chessF$Round4)
+  {
+  chessF$Round4[i] <- chessF$PreRating[chessF$Round4[i]]
+}
+for (i in chessF$Round5)
+  {
+  chessF$Round5[i] <- chessF$PreRating[chessF$Round5[i]]
+}
+for (i in chessF$Round6)
+  {
+  chessF$Round6[i] <- chessF$PreRating[chessF$Round6[i]]
+}
+for (i in chessF$Round7)
+  {
+  chessF$Round7[i] <- chessF$PreRating[chessF$Round7[i]]
+}
+head(chessF)
+```
+
+
+
+This line of code takes the seven opponents prerating numbers and take the average of each row and store them in a new column. (Since I was unable to replace the IDs with their corresponding prerating, my code just averages their ID numbers.)
+```{r}
+chessF <- chessF |>
+  rowwise() |>
+  mutate('OppAvgPrerating' = mean(c(Round1, Round2, Round3, Round4, Round5, Round6, Round7), na.rm = TRUE))
+
+chessF <- chessF |>
+  rowwise() |>
+  mutate('OppAvgPrerating' = round(OppAvgPrerating, digits = 0))
+
+```
+
+##Conclusion: I am left with a dataframe with information on Player's Name, Total Points, State, PreRating, and Average Pre Chess Rating of Opponents for each player.
+
+```{r}
+chessF <- select(chessF, -c("PlayerID", "Round1", "Round2", "Round3", "Round4", "Round5", "Round6", "Round7"))
+
+head(chessF)
+```
+Here is the .csv file:
+```{r}
+write_csv(chessF, 'chessFinal.csv')
+```
+
