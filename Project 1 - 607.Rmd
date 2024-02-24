@@ -171,7 +171,7 @@ head(chessF)
 
 
 
-This line of code takes the seven opponents prerating numbers and take the average of each row and store them in a new column. (Since I was unable to replace the IDs with their corresponding prerating, my code just averages their ID numbers.)
+This line of code takes the seven opponents prerating numbers and take the average of each row and store them in a new column. 
 ```{r}
 chessF <- chessF |>
   rowwise() |>
