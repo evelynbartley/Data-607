@@ -1,0 +1,133 @@
+---
+title: "Assignment 3 - 607"
+author: "Evelyn Bartley"
+date: "2024-02-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+```
+
+## Overview:
+
+Assignment 3 asks me to create a .csv file that includes specific information regarding two airlines (Alaska and AM West) across five destinations (Los Angeles, Phoenix, San Diego, San Francisco, and Seattle). I will read the file into R and perform analysis to compare arrival delays for the two airlines.
+
+I created a .csv file from a google sheet document, saved it in my github repository, copied the url of the raw file, and pasted it into R.
+
+```{r}
+#Load the .csv file into R and save it
+dataF <- read.csv('https://raw.githubusercontent.com/evelynbartley/Data-607/main/Untitled%20spreadsheet%20-%20Sheet1.csv', header = TRUE)
+#fill in empty cells
+dataF$X = c("Alaska", "Alaska", "AM West", "AM West")
+#replace periods with a space for aesthetic purposes
+dataF <- dataF |>
+  rename(
+    "Los Angeles" = "Los.Angeles",
+    "San Diego" = "San.Diego",
+    "San Francisco" = "San.Francisco"
+  )
+dataF
+```
+
+## 1. TIDY!
+
+I want to make every column a variable, and every variable a column every observation a row and every row an observation, and every value a cell and every cell a value.
+
+This dataset has 4 variables: Airline, Arrival Status, Destination and Count
+
+Airline has two possible values: Alaska or AM West
+
+Arrival Status has two possible values: on time or delayed
+
+Destination has five possible values: Los Angeles, Phoenix, San Diego, San Francisco, or Seattle
+
+Counts is a quantitative value
+
+```{r}
+#Use pivot_longer() to combine the five destination columns into one column that specifies destination, and put those values into a frequency column that specifies the frequency of the observation.
+dataF <- dataF |>
+  pivot_longer('Los Angeles':'Seattle', names_to = "Destination", values_to = "Counts")
+head(dataF)
+```
+
+I want to give each column a descriptive name.
+
+```{r}
+dataF <- dataF |>
+  rename(
+    "Airline" = "X",
+    "Status" = "X.1"
+  )
+head(dataF)
+```
+
+Now I have a tidy data frame since each variable forms a column, each observation forms a row, and each value has its own cell.
+
+## 2. Analysis
+
+I want to compare the arrival delays for each airline. Let's start by seeing some summary statistics.
+
+```{r}
+#Create a subset of the dataframe that only includes information from Alaska airlines
+AlaskaData <- dataF[which(dataF$Airline=='Alaska'), ]
+AlaskaData
+#Create a subset of the dataframe that only includes information from Alaska airlines
+AMWestData <- dataF[which(dataF$Airline=='AM West'), ]
+AMWestData
+#get the total number of planes from each airline
+TotalAlaska <- summarise(AlaskaData, sum(Counts))
+TotalAlaska
+TotalAMWest <- summarise(AMWestData, sum(Counts))
+TotalAMWest
+```
+
+In total, Alaska airlines had 3,775 flights and AM West had 7,225 flights.
+
+Now let's group the data frame by arrival status.
+
+```{r}
+delay <- group_by(dataF, Status)
+summarise(delay, 
+          sum(Counts))
+```
+
+In total, 1,288 flights were delayed and 9,712 were on time.
+
+I want to see the proportion of delayed/on time flights based on what airline they are from.
+
+```{r}
+propStatusAirline <- ggplot(dataF, mapping = aes(x = Airline, y = Counts, fill = Status)) + geom_col(position = "fill") 
+propStatusAirline
+```
+
+Based on this stacked bar chart that shows proportions, there is not a huge difference in the proportion of delayed flights from Alaska vs from AM West.
+
+Now I want to see if there's a big difference in proportion of delayed flights based on their destination for Alaska flights.
+
+```{r}
+propAlaskaDestination <- ggplot(AlaskaData, mapping = aes(x = Destination, y = Counts, fill = Status)) + geom_col(position = "fill")
+propAlaskaDestination
+```
+
+I dont like how the names of the destinations are hard to read so I want to make this proportional bar plot horizontal!
+
+```{r}
+propAlaskaDestinationH <- ggplot(AlaskaData, mapping = aes(x = Destination, y = Counts, fill = Status)) + geom_col(position = "fill") + coord_flip()
+propAlaskaDestinationH
+```
+
+Much better!
+
+Now lets do the same for the AM West flights. I want to see if there's a big difference in proportion of delayed flights based on their destination for AM West flights.
+
+```{r}
+propAMWestDestination <- ggplot(AMWestData, mapping = aes(x = Destination, y = Counts, fill = Status)) + geom_col(position = "fill") + coord_flip()
+propAMWestDestination
+```
+
+## Conclusions
+
+Based on this analysis, there is not a significant difference between arrival delays for Alaska and AM West. From this data specifically, I found that the greatest proportion of delayed flights were from AM West airlines going to San Francisco. I also found that the greatest proportion of on time flights were from Alaska airlines going to Phoenix.
