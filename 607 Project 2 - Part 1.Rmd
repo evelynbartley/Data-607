@@ -1,0 +1,56 @@
+---
+title: "607 Project 2 - Part 1"
+author: "Evelyn Bartley"
+date: "2024-02-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+```
+
+## Overview
+This is part 1 on project 2 for Data 607. I am using marriage data from Census.gov. I will create a .csv file, use the tidyverse to read and transform the data in R, and perform analysis on it. I want to analyze the proportion of men and women that have never been married. I want to find out the age bracket where the difference in proportions is the largest.
+
+First I created a .csv file of the marriage data and added it to my github repository
+```{r}
+marriage <- read.csv("https://raw.githubusercontent.com/evelynbartley/Data-607/main/ACSST1Y2022.S1201-2024-02-20T191328.csv", header = TRUE)
+tibble(marriage)
+```
+I want to rename columns I want to keep. This is dependent on the analysis I want to do.
+```{r}
+marriage1 <- marriage |> 
+  select(Group = Label..Grouping., Total = United.States..Total..Estimate, Nevermarried = United.States..Never.married..Estimate)
+tibble(marriage1)
+```
+Now I want to get rid of the rows that are irrelevant to my analysis.
+```{r}
+#start by making a subset of rows that will inform our analysis
+marriage2 <- marriage1[-c(1:3), ]
+marriage3 <- marriage2[-c(14:37),]
+marriage4 <- marriage3[-c(7), ]
+
+#add gender to the age brackets
+marriage4$Group[1:6] <- sapply(marriage4$Group, function(x) paste("Female", x))
+marriage4$Group[7:12] <- sapply(marriage4$Group[7:12], function(x) paste("Male", x))
+head(marriage4)
+```
+Let's separate gender from age.
+```{r}
+marriage5 <- marriage4 %>%
+  separate(Group, into = c("Gender", "Age"), sep = "\\s", extra = "merge")
+tibble(marriage5)
+```
+
+
+
+## Analysis and Conclusion
+
+We are analyzing the difference in proportion of men and women who have never been married based on age bracket. We want to find out which age bracket that the difference in proportion is the largest.
+When we view marriage5, we can use the small arrows on the "Age" column button to arrange the data in descending or ascending order. Doing this, we can see that the difference in proportion of males and females that have never been married is the largest in the age range 20 to 34 years. The difference (71.3 - 63.5 = 7.8) is 7.8%. So the difference in proportion between men and women age 20 to 34 years that have never been married is 7.8%. 71.3% of women age 20 to 34 have never been married and 63.5% of men age 20 to 34 have never been married. These conclusions are based on the data collected by the US census in 2022.
+
+
+
+
