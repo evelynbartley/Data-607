@@ -1,0 +1,66 @@
+---
+title: "Project 2 - part 2"
+author: "Evelyn Bartley"
+date: "2024-03-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Overview
+
+I am taking the .csv file of the Annual Surface Tempurature Change from climatedata.imf.org. My goal is to tidy the dataset for analysis. I want to see which regions are most affected by climate change.
+
+Lets read the .csv file into R from my github repository.
+```{r}
+climate <- read.csv("https://raw.githubusercontent.com/evelynbartley/Data-607/main/Indicator_3_1_Climate_Indicators_Annual_Mean_Global_Surface_Temperature_577579683071085080.csv")
+tibble(climate)
+```
+
+
+Let's clean up the dataset to include the variables we need for analysis. I want to use the ISO3 code for each country instead of the Country's name for tidyness.
+```{r}
+climate1 <- climate |> 
+  select(Country = ISO3, X1961:X2000)
+tibble(climate1)
+```
+
+
+Instead of having columns for every year, I want to have one column for year, and one column for the surface temperature change in degrees Celcius.
+```{r}
+climate2 <- climate1 %>%
+  pivot_longer(
+    cols = starts_with("X"),
+    names_to = "Year",
+    values_to = "TempChange"
+  )
+tibble(climate2)
+```
+To create one value that we can reference for the change in surface temperature from 1961 to 2000, I want to calculate the average change in surface temperature for each country.
+```{r}
+climate3 <- climate2 %>%
+  group_by(Country) %>%
+  summarise(avg = mean(TempChange, na.rm = TRUE))
+head(climate3)
+```
+
+Lets see the distribution of average change in temperature.
+```{r}
+avgofavgs <- mean(climate3$avg, na.rm = TRUE)
+ggplot(climate3, aes(x = avg)) + geom_histogram() + geom_vline(aes(xintercept = avgofavgs), color = "tomato", linewidth = 1)
+```
+Our distribution is looking pretty normal! There does seem to be two outliers.
+
+I want to see which country had the highest average change in temperature and which had the lowest.
+```{r}
+climate3[which.min(climate3$avg), ]
+climate3[which.max(climate3$avg), ]
+```
+## Analysis and Conclusion
+
+The country with the lowest average change in temperature was Greenland at -0.156 degrees Celcius and the country with the highest average change in temperature was Luxembourg at 1.651 degrees Celcius.
+Using the small arrows when viewing climate3, we can arrange the averages in descending order. From this, I can see that Luxenbourg, Belgium, Estonia, Latvia, and Slovenia had the five highest average changes in temperatures. This provides evidence that Europe is being effected by climate change the most. 
+
