@@ -1,0 +1,90 @@
+---
+title: "Project 2 - part 3"
+author: "Evelyn Bartley"
+date: "2024-03-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Overview
+
+Looking at the efficacy of COVID-19 vaccines across multiple demographics, time, and vaccination status (none, 1 vaccine, 2 vaccines) measured in deaths per 100,000 cases. 
+
+```{r}
+covid <- read.csv("https://raw.githubusercontent.com/evelynbartley/Data-607/main/Rates_of_COVID-19_Cases_or_Deaths_by_Age_Group_and_Updated__Bivalent__Booster_Status_20240302.csv")
+tibble(covid)
+```
+
+So this dataset is pretty overwhelming. To look at efficacy of Covid vaccines, I want to look at covid deaths for each age range.
+
+I only want to look at the cases that resulted in death.
+```{r}
+deaths <- covid %>%
+  filter(outcome == "death")
+tibble(deaths)
+```
+
+```{r}
+#separate the month column so that each column only has one variable
+deaths1 <- deaths %>%
+  separate(month, into = c("Month", "Year"))
+tibble(deaths1)
+```
+I only want to focus on cases where the person was vaccinated with at least a primary series of vaccines.
+```{r}
+#select cases that have a vaccinated status
+deaths2 <- deaths1 %>%
+  filter(vaccination_status == "vaccinated")
+tibble(deaths2)
+```
+```{r}
+# I don't need the summary row "all_ages" so I filter the dataframe to include everything BUT that. I also don't have data for the 0.5-4 and 5-11 age groups for each year so I will not include that in my analysis.
+deaths3 <- deaths2 %>%
+  filter(!age_group == "all_ages") %>%
+  filter(!age_group == "0.5-4") %>%
+  filter(!age_group == "5-11")
+tibble(deaths3)
+```
+
+Now that I know all of the data I have is a "death" outcome, I can get rid of that column, because it is the same value for all cases. I want to construct my analysis based on . I also want to get rid of some of the other irrelevant columns. I want to focus on the columns "vaccinated_with_outcome" and "unvaccinated_with_outcome" for analysis, and change the names of those columns.
+```{r}
+# subset the columns I want to keep
+deaths4 <- deaths3 %>%
+  select(Year, Age = age_group, Vaccinated_Death = vaccinated_with_outcome, Unvaccinated_Death = unvaccinated_with_outcome)
+tibble(deaths4)
+```
+It could be helpful to store the difference in vaccinated deaths and unvaccinated so that we can reference one value instead of two.
+```{r}
+deaths5 <- deaths4 %>% 
+  mutate( , Difference = Unvaccinated_Death - Vaccinated_Death)
+tibble(deaths5)
+```
+
+So now, the Difference column values represent how many more people that died from covid who were unvaccinated compared to the people who died from covid that were vaccinated.
+
+
+```{r}
+deaths6 <- deaths5 %>%
+  group_by(Year, Age) %>%
+  summarize_all(sum)
+
+tibble(deaths6)
+```
+## Analysis
+
+I want to keep in mind that both Vaccinated_Death and Unvaccinated_Death are recorded as deaths per 100,000 cases.
+
+```{r}
+ggplot(deaths6, aes(x = Age, y = Difference, fill = Year)) +
+  geom_col(position = "dodge")
+```
+
+I wasn't expecting a graph like this! This leads me to believe that being unvaccinated as someone over 80 is advantageous over being vaccinated. 
+
+## Conclusion
+
+Overall, people age 12-79 that are vaccinated are dying less than people age 12-79 that are unvaccinated. In 2021, this conclusion is most relevant. In 2022, there is less of a difference between deaths of the vaccinated and deaths of the unvaccinated for people age 12-79. And in 2023, there is almost no difference. 2022 had the more 80+ year old vaccinated people die than 80+ year old unvaccinated people.
