@@ -1,0 +1,94 @@
+---
+title: "Web APIs Assignment - 607"
+author: "Evelyn Bartley"
+date: "2024-03-18"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+## Overview:
+
+Your task is to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and transform it into an R DataFrame.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(httr2)
+library(jsonlite)
+```
+
+
+After creating an account and signing up for an API key, I chose the Most Popular API from the New York Times APIs.
+My goal is to use the httr2 package to read in the JSON data.
+
+```{r}
+#request the most viewed articles for the last 7 days
+#https://api.nytimes.com/svc/mostpopular/v2/viewed/{period}.json
+request <- request('https://api.nytimes.com') %>%
+  req_url_path_append(
+    'svc',
+    'mostpopular',
+    'v2',
+    'viewed',
+    '7.json?api-key=gAEU2kmMwr0EEG1gwEzF9YzKf0lfClsc'
+  )
+
+nyt_resp <- req_perform(request)
+
+```
+
+```{r}
+nyt_resp %>% resp_content_type()
+#the response is an application/json
+```
+
+```{r}
+#nyt_resp %>% resp_body_json()
+#confirmed the response body is in json format
+# Parse the JSON response
+nyt_data <- nyt_resp %>%
+  resp_body_json(check_type = TRUE, simplifyVector = FALSE)
+```
+
+```{r}
+# Extract from article
+articles <- nyt_data$results$title
+nyt_data$results$source
+```
+
+This first approach wasn't successful. I could look at the api response data of the application/json format but couldn't extract elements from it.
+
+
+Using the tip about the jsonlite package Amanda Fox gave me on slack:
+
+```{r}
+my_url <- 'https://api.nytimes.com/svc/mostpopular/v2/viewed/7.json?api-key=gAEU2kmMwr0EEG1gwEzF9YzKf0lfClsc'
+articledata <- fromJSON(my_url, flatten = TRUE)
+title <- articledata$results$title
+author <- articledata$results$byline
+date_published <-  articledata$results$published_date 
+section <- articledata$results$section
+subsection <- articledata$results$subsection
+
+articledf <- data.frame(title, author, date_published, section, subsection)
+tibble(articledf)
+```
+
+I looked into using the nytimes package to do this assignment but I wasn't able to get anywhere.
+
+```{r}
+library(nytimes)
+nytimes_key("gAEU2kmMwr0EEG1gwEzF9YzKf0lfClsc")
+```
+
+```{r}
+viewed <- ny_popular_viewed(7)
+```
+
+
+## Conclusion:
+I was surprised that I could have completed the assignment with just the one chunk of code. Messing around with the req_*() and resp_*() functions did help me understand apis more though!
