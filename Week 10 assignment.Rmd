@@ -1,0 +1,346 @@
+---
+title: "Week 10 assignment - 607"
+author: "Evelyn Bartley"
+date: "2024-03-27"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview: Practice with sentiment analysis and the tidyverse
+
+I am going to start by getting the primary example code from Chapter 2: Sentiment analysis with tidy data from Text Mining with R: A Tidy Approach.
+
+
+## The sentiments datasets
+
+```{r}
+library(tidyverse)
+library(tidytext)
+
+#get AFINN-111 sentiments from http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=6010 
+#categorizes words in a binary fashion (“yes”/“no”) into categories of positive, negative, anger, anticipation, disgust, fear, joy, sadness, surprise, and trust
+get_sentiments("afinn")
+
+
+#get bing sentiments from https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html
+get_sentiments("bing")
+
+#get NRC Word-Emotion Association Lexicon from http://saifmohammad.com/WebPages/lexicons.html
+#assigns words with a score that runs between -5 and 5, with negative scores indicating negative sentiment and positive scores indicating positive sentiment
+get_sentiments("nrc")
+
+```
+
+
+## Sentiment analysis with inner join
+
+```{r}
+library(janeaustenr)
+library(stringr)
+
+# make text tidy: one word per row
+tidy_books <- austen_books() %>%
+  group_by(book) %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+```
+
+```{r}
+#filter nrc lexicon for joy words
+nrc_joy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+#use inner_join() to perform the sentiment analysis
+#we count the joy words from the book Emma, sorting from most common
+tidy_books %>%
+  filter(book == "Emma") %>%
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+```
+
+```{r}
+#use pivot_wider() so that we have negative and positive sentiment in separate columns, and lastly calculate a net sentiment (positive - negative)
+jane_austen_sentiment <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(book, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+#plot these sentiment scores across the plot trajectory of each novel
+ggplot(jane_austen_sentiment, aes(index, sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+```
+
+
+## Comparing the three sentiment dictionaries
+
+```{r}
+#get Pride and Prejudice book
+pride_prejudice <- tidy_books %>% 
+  filter(book == "Pride & Prejudice")
+```
+
+```{r}
+#use integer division (%/%) to define larger sections of text that span multiple lines
+#find the net sentiment in each of these sections of text
+afinn <- pride_prejudice %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc <- bind_rows(
+  pride_prejudice %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  pride_prejudice %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+```{r}
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+```{r}
+get_sentiments("nrc") %>% 
+  filter(sentiment %in% c("positive", "negative")) %>% 
+  count(sentiment)
+```
+
+```{r}
+get_sentiments("bing") %>% 
+  count(sentiment)
+```
+
+The result for the NRC lexicon biased so high in sentiment compared to the Bing et al. result.
+
+## Most common positive and negative words
+
+```{r}
+bing_word_counts <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+bing_word_counts
+```
+
+```{r}
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)
+```
+
+
+
+
+## Expand code
+
+I am introducing a sentiment lexicon from Kaggle's Sentiment Analysis Word Lists Dataset ('https://www.kaggle.com/datasets/prajwalkanade/sentiment-analysis-word-lists-dataset?resource=download').
+```{r}
+# create a positive words data drame
+positive <- read.delim('https://raw.githubusercontent.com/evelynbartley/Data-607/main/positive-words.txt', header = FALSE) %>%
+  rename(word = V1)
+
+#create a negative words data frame
+negative <- read.delim('https://raw.githubusercontent.com/evelynbartley/Data-607/main/negative-words.txt', header = FALSE) %>%
+  rename(word = V1)
+```
+
+I am using the gutenbergr package ('https://docs.ropensci.org/gutenbergr/') to access free ebooks. I downloaded War and Peace with gutenberg_download() and War and Peace's id number.
+```{r}
+library(gutenbergr)
+
+gutenberg_works() %>%
+  filter(title == "War and Peace")
+WarandPeace <- gutenberg_download(2600)
+```
+
+Tidy!
+```{r}
+# make text tidy: one word per row
+WarandPeace_tidy <- WarandPeace %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+```
+
+Get rid of stop words
+```{r}
+data(stop_words)
+WarandPeace_tidy <- WarandPeace_tidy %>%
+  anti_join(stop_words)
+```
+
+Perform the sentiment analysis
+```{r}
+#we count the positive words from War and Peace, sorting from most common
+WarandPeace_tidy %>%
+  inner_join(positive) %>%
+  count(word, sort = TRUE)
+```
+
+```{r}
+#we count the negative words from War and Peace, sorting from most common
+WarandPeace_tidy %>%
+  inner_join(negative) %>%
+  count(word, sort = TRUE)
+```
+
+```{r}
+#filter nrc lexicon for disgust words
+nrc_disgust <- get_sentiments("nrc") %>% 
+  filter(sentiment == "disgust")
+
+#use inner_join() to perform the sentiment analysis
+#we count the disgust words from the book War and Peace, sorting from most common
+WarandPeace_tidy %>%
+  inner_join(nrc_disgust) %>%
+  count(word, sort = TRUE)
+```
+
+I think its funny that the nrc lexicon includes "feeling" as a word of disgust. Feelings are disgusting!
+
+```{r}
+#filter nrc lexicon for sadness words
+nrc_sadness <- get_sentiments("nrc") %>% 
+  filter(sentiment == "sadness")
+
+#use inner_join() to perform the sentiment analysis
+#we count the sadness words from the book War and Peace, sorting from most common
+WarandPeace_tidy %>%
+  inner_join(nrc_sadness) %>%
+  count(word, sort = TRUE)
+```
+
+
+```{r}
+#use pivot_wider() so that we have negative and positive sentiment in separate columns, and lastly calculate a net sentiment (positive - negative)
+WarandPeace_sentiment_50 <- WarandPeace_tidy %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(, index = linenumber %/% 50, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+#plot these sentiment scores across the plot trajectory of each novel
+ggplot(WarandPeace_sentiment_50, aes(index, sentiment)) + geom_col() 
+```
+
+The plot shows that there are more overall negative sentiment sections than positive sentiment sections. 
+
+```{r}
+#use pivot_wider() so that we have negative and positive sentiment in separate columns, and lastly calculate a net sentiment (positive - negative)
+WarandPeace_sentiment_200 <- WarandPeace_tidy %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(, index = linenumber %/% 200, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+#plot these sentiment scores across the plot trajectory of each novel
+ggplot(WarandPeace_sentiment_200, aes(index, sentiment)) + geom_col() 
+```
+
+Changing the line number argument, I get a lot more negative sections in the book than positive.
+
+
+I want to make my kaggle sentimentlexicons into one dataframe.
+```{r}
+positive$sentiment <- "positive"
+negative$sentiment <- "negative"
+kaggle_sentiments <- rbind(positive, negative)
+
+# Count how many positive and negative words
+kaggle_sentiments %>% 
+  count(sentiment)
+```
+
+There are more than double the amount of negative words than positive words.
+
+
+```{r}
+#find out how much each word contributed to each sentiment
+kaggle_word_counts <- WarandPeace_tidy %>%
+  inner_join(kaggle_sentiments) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+kaggle_word_counts
+```
+
+```{r}
+#plot how each word contributed to sentiment
+kaggle_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)
+```
+"Love" contributed most to sentiment.
+
+
+
+Wordclouds!
+```{r}
+library(wordcloud)
+
+WarandPeace_tidy %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+
+```{r}
+library(reshape2)
+
+WarandPeace_tidy %>%
+  inner_join(kaggle_sentiments) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray80", "gray20"),
+                   max.words = 100)
+```
+## Conclusions
+
+It was interesting to do this sentiment analysis on a book I have only ever heard about. I wonder if I would agree or disagree that the sentiment of War and Peace is mostly negative. Probably.
+
+I liked this assignment because it introduced a field of data science that can be biased like humans are biased. Its interesting that the analysis of sentiment can change based on the lexicon you use to analyze sentiment.
