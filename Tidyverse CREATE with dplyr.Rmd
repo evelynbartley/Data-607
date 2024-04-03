@@ -1,0 +1,89 @@
+---
+title: "tidyverse CREATE assignment with dplyr"
+author: "Evelyn Bartley"
+date: "2024-04-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+This is example code for using the dplyr package in the tidyverse!
+```{r}
+library(tidyverse)
+```
+## Load example data
+
+I am using the Tree Survival Prediction dataset from Kaggle (https://www.kaggle.com/datasets/yekenot/tree-survival-prediction).
+```{r}
+#read csv file into R and save it as a data frame
+trees <- read.csv('https://raw.githubusercontent.com/evelynbartley/Data-607/main/Tree_Data.csv')
+tibble(trees)
+```
+
+## Use dplyr package to manipulate data
+*dplyr is a grammar of data manipulation, providing a consistent set of verbs that help you solve the most common data manipulation challenges:*
+
+## Use select() to pick variables based on their names
+
+I want to select variables that I am interested in analyzing. Let's look at Species (includes Acer saccharum, Prunus serotina, Quercus alba, and Quercus rubra), Light_Cat (categorical light level created by splitting the range of Light_ISF values into three bins (low, med, high)), Sterile (whether the soil was sterilized or not), EMF (percent ectomycorrhizal fungi colonization on the root tips of harvested seedlings) and Alive (indicates if the seedling was alive at the end of the second growing season. "X" in this field indicates alive status). We can use the piping function to apply select() to our data frame.
+
+```{r}
+tibble(trees) %>% 
+  select(Species, Light_Cat, Sterile, EMF, Alive)
+```
+We can also use select() to change variable/column names. Here we changed Light_Cat to Light:
+```{r}
+tibble(trees) %>% 
+  select(Species, Light = Light_Cat, Sterile, EMF, Alive)
+```
+
+
+## Use mutate() to add new variables that are functions of existing variables.
+
+I want to create a new variable that is a function of the EMF variable. This creates a new column called EMF_present with "X" if ectomycorrhizal fungi colonization on the root tips was present and NA if the value was almost zero or NA.
+```{r}
+tibble(trees) %>% 
+  select(Species, Light = Light_Cat, Sterile, EMF, Alive) %>%
+  mutate(EMF_present = if_else(EMF >= 0.0000001, "X", NA))
+```
+
+## Use filter() to pick cases based on their values.
+
+I want to filter the data so that we only look at data from the species "Quercus alba".
+```{r}
+tibble(trees) %>% 
+  select(Species, Light = Light_Cat, Sterile, EMF, Alive) %>%
+  mutate(EMF_present = if_else(EMF >= 0.0000001, "X", NA)) %>%
+  filter(Species == 'Quercus alba')
+```
+## Use arrange() to change the ordering of the rows
+
+I want to arrange the EMF values from largest to smallest.
+```{r}
+tibble(trees) %>% 
+  select(Species, Light = Light_Cat, Sterile, EMF, Alive) %>%
+  mutate(EMF_present = if_else(EMF >= 0.0000001, "X", NA)) %>%
+  filter(Species == 'Quercus alba') %>%
+  arrange(desc(EMF))
+```
+
+## Use summarise() to reduce multiple values down to a single summary.
+
+I want to find the mean percent of ectomycorrhizal fungi colonization on the root tips of harvested seedlings.
+```{r}
+tibble(trees) %>% 
+  select(Species, Light = Light_Cat, Sterile, EMF, Alive) %>%
+  mutate(EMF_present = if_else(EMF >= 0.0000001, "X", NA)) %>%
+  filter(Species == 'Quercus alba') %>%
+  arrange(desc(EMF)) %>%
+  summarise(mean_EMF = mean(EMF, na.rm = TRUE)) # remove NAs
+```
+
+
+
+
+
