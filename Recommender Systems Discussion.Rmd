@@ -1,0 +1,69 @@
+---
+title: "Recommender Systems Discussion"
+author: "Evelyn Bartley"
+date: "2024-04-03"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Overview:
+
+I am going to analyze Pinterest's Homepage as a recommendation system.
+
+## Introduction
+
+Pinterest is an application that allows users to create customized ‘boards’ containing personally selected ‘pins' which are clickable, savable images. It is largely used by creative people to gather ideas on projects or find inspiration. The Homepage of Pinterest features pins that are likely to grab the eye of the user; and uses a recommendation system in order to personalize each user’s Homepage.
+
+## Scenario Design Analysis
+
+*Who are your target users*
+The target users of Pinterest's Homepage are Pinterest users. People that use Pinterest are mostly creative, young women. I have used Pinterest to gather ideas for art projects, create themed mood boards, and making visual libraries.
+
+*What are their key goals*
+The goals of Pinterest users are mainly to create repositories of ideas and inspiration. When you look at a public users account, you can see the various boards they have created. You can usually quickly gather what each user uses Pinterest for with a quick look at their boards.
+
+*How can you help them accomplish those goals?*
+Suggesting content that is relevant to recent pins or recent searches would directly help Pinterest users create themed repositories. Pinterest does this with their Homepage. 
+
+
+## About Pinterest's Recommendation System
+
+
+In 2022, Pinterest's Engineering team (Xue Xia, Software Engineer, Homefeed Ranking; Neng Gu, Software Engineer, Content & User Understanding; Dhruvil Deven Badani, Engineering Manager, Homefeed Ranking; Andrew Zhai, Software Engineer, Advanced Technologies Group) published "How Pinterest Leverages Realtime User Actions in Recommendation to Boost Homefeed Engagement Volume". This blog post explains how the engineers used machine learning to improve Pinterest's Homefeed engagement.
+
+
+![Pinnability Model^](/users/eviebartley/Pinnability_model.png)
+
+The Homepage is "one of most important surfaces for pinners to discover inspirational ideas and contributes to a large fraction of overall user engagement" (Medium.com). The Homepage has a few top positions, which are the locations where pins are immediately viewed when you open Pinterest. Based on user interest, followed boards, recently searched, recently pinned, etc, Pinterest gathers a collection of 'Homefeed candidate pins'. In order to sift through this collection of candidate pins, a Homefeed ranking model is used. This Homefeed ranking model is referred to as the Pinnability Model. This model ranks the collection of candidate pins by predicting their relevance to each unique user.
+
+
+Pinterest also uses PinnerSAGE V3, a pretrained user representation that measures a user's interests in the long term by taking into account historical interactions. PinnerSAGE is a relatively elementary system in the sense that there are many aspects that it does not cover. Because PinnerSAGE was trained to account for a user's interests in the long run, it lacks the ability to model short-term user interest. 
+
+
+![Realtime User Action Sequence^](/users/eviebartley/realtime.png)
+
+
+The realtime user action sequence was engineered to complement PinnerSAGE V3, and models short-term user interest. Realtime user action sequence is "a stable, low latency, realtime feature pipeline supports a robust online recommendation system" (Medium.com). This action sequence can be separated into two sections, event time and request time. 
+
+
+![Homefeed ranking model features^](/users/eviebartley/homefeedfeatures.png)
+
+
+The Homefeed ranking model has three main features including past 100 actions, past 100 pins from PinSAGE, and timestamp of past 100 engagements. With this information, the model takes a <user, candidate pin> pair and predicts the type of engagement the user has with the candidate pin.
+
+
+![Homefeed Ranking Model Overview^](/users/eviebartley/ranking model.png)
+
+The model takes signals as inputs. These can be 'pinner signals, user signals, pin signals, and context signals'. Next the model inputs a realtime user sequence and uses a sequence processing module to transform the elements. After transformation, the elements are fed through a multilayer perceptron layer in order to predict the user's engagement type with the candidate pin.
+
+## Conclusions
+
+Through the re-engineering of the Homepage recommendation system, the engineers emphasized the importance of retraining models with realtime sequence in order to maintain user engagement. Using realtime features requires frequent training, but is necessary to avoid engagement decay.
+For the future of Pinterest's Homefeed recommendation system, I would elect to continue using realtime analysis. I believe the dynamic nature of people's interests can only be realistically modeled when you take into account the second-to-second changes in interest.
+
+
+## Citations:
+
+Medium.com
+(https://medium.com/pinterest-engineering/how-pinterest-leverages-realtime-user-actions-in-recommendation-to-boost-homefeed-engagement-volume-165ae2e8cde8)
